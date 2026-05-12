@@ -5,7 +5,7 @@ import pandas as pd
 # LOAD DATASET
 # =====================================================
 
-DATASET_PATH = r"C:\Users\hanan\Documents\Data\Document\Exploratory Data\streamlit_ocr_ktp\dataset\dataset_OCR_preprocessing.csv"
+DATASET_PATH = "./dataset/dataset_OCR_preprocessing.csv"
 
 df = pd.read_csv(DATASET_PATH)
 
