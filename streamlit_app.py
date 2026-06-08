@@ -2,14 +2,6 @@ import streamlit as st
 import pandas as pd
 
 # =====================================================
-# LOAD DATASET
-# =====================================================
-
-DATASET_PATH = "./dataset/dataset_OCR_preprocessing.csv"
-
-df = pd.read_csv(DATASET_PATH)
-
-# =====================================================
 # PAGE CONFIG
 # =====================================================
 
@@ -19,175 +11,188 @@ st.set_page_config(
 )
 
 # =====================================================
+# LOAD DATASET
+# =====================================================
+
+DATASET_PATH = r"C:\Users\hanan\Documents\Data\Document\Exploratory Data\streamlit_ocr_ktp\dataset\dataset_OCR_preprocessing.csv"
+
+@st.cache_data
+def load_data(path):
+
+    df = pd.read_csv(
+        path,
+        dtype={"NIK": str}
+    )
+
+    return df
+
+df = load_data(DATASET_PATH)
+
+# =====================================================
 # TITLE
 # =====================================================
 
 st.title("Dashboard Informasi Kependudukan")
 
-st.write(f"Total Data: {len(df)}")
-
 # =====================================================
-# SEARCH BY NAME ONLY
+# OVERVIEW
 # =====================================================
 
-search_query = st.text_input(
-    "Search Nama"
+st.header("Overview Data")
+
+
+with st.expander("Lihat Seluruh Dataset"):
+
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
+
+# =====================================================
+# QUERY SECTION
+# =====================================================
+
+st.header("Filter dan Query Data")
+
+# =====================================================
+# PILIH KOLOM
+# =====================================================
+
+selected_columns = st.multiselect(
+    "Pilih Kolom",
+    options=df.columns.tolist(),
+    default=[
+        "Nama",
+        "Jenis Kelamin",
+        "Kecamatan",
+        "Agama",
+        "Pekerjaan",
+        "Usia"
+    ]
 )
 
 # =====================================================
-# FILTER PEKERJAAN
+# FILTER DINAMIS
 # =====================================================
 
-pekerjaan_options = sorted(
-    df["Pekerjaan"]
-    .dropna()
-    .unique()
-    .tolist()
-)
+st.subheader("Filter")
 
-selected_pekerjaan = st.selectbox(
-    "Pekerjaan",
-    ["Semua"] + pekerjaan_options
-)
+selected_filters = {}
 
-# =====================================================
-# FILTER AGAMA
-# =====================================================
+for column in selected_columns:
 
-agama_options = sorted(
-    df["Agama"]
-    .dropna()
-    .unique()
-    .tolist()
-)
+    # ==========================================
+    # NUMERIC
+    # ==========================================
 
-selected_agama = st.selectbox(
-    "Agama",
-    ["Semua"] + agama_options
-)
+    if pd.api.types.is_numeric_dtype(df[column]):
 
-# =====================================================
-# FILTER JENIS Kelamin
-# =====================================================
+        min_value = float(df[column].min())
 
-jenis_kelamin_options = sorted(
-    df["Jenis Kelamin"]
-    .dropna()
-    .unique()
-    .tolist()
-)
+        max_value = float(df[column].max())
 
-selected_jenis_kelamin = st.selectbox(
-    "Jenis Kelamin",
-    ["Semua"] + jenis_kelamin_options
-)
-
-# =====================================================
-# FILTER USIA
-# =====================================================
-
-min_usia = int(df["Usia"].min())
-
-max_usia = int(df["Usia"].max())
-
-usia_range = st.slider(
-    "Range Usia",
-    min_usia,
-    max_usia,
-    (min_usia, max_usia)
-)
-
-# =====================================================
-# FILTERING
-# =====================================================
-
-filtered_df = df.copy()
-
-# =====================================================
-# SEARCH FILTER (NAMA ONLY)
-# =====================================================
-
-if search_query:
-
-    filtered_df = filtered_df[
-        filtered_df["Nama"]
-        .astype(str)
-        .str.contains(
-            search_query,
-            case=False,
-            na=False
+        selected_filters[column] = st.slider(
+            f"{column}",
+            min_value=min_value,
+            max_value=max_value,
+            value=(min_value, max_value),
+            key=f"slider_{column}"
         )
-    ]
+
+    # ==========================================
+    # TEXT / CATEGORY
+    # ==========================================
+
+    else:
+
+        options = sorted(
+            df[column]
+            .dropna()
+            .astype(str)
+            .unique()
+            .tolist()
+        )
+
+        selected_filters[column] = st.multiselect(
+            f"{column}",
+            options=options,
+            default=[],
+            key=f"filter_{column}"
+        )
 
 # =====================================================
-# FILTER PEKERJAAN
+# BUTTON
 # =====================================================
 
-if selected_pekerjaan != "Semua":
-
-    filtered_df = filtered_df[
-        filtered_df["Pekerjaan"] == selected_pekerjaan
-    ]
-
-# =====================================================
-# FILTER AGAMA
-# =====================================================
-
-if selected_agama != "Semua":
-
-    filtered_df = filtered_df[
-        filtered_df["Agama"] == selected_agama
-    ]
-
-# =====================================================
-# FILTER AGAMA
-# =====================================================
-
-if selected_jenis_kelamin != "Semua":
-
-    filtered_df = filtered_df[
-        filtered_df["Jenis Kelamin"] == selected_jenis_kelamin
-    ]
-
-
-# =====================================================
-# FILTER USIA
-# =====================================================
-
-filtered_df = filtered_df[
-    (filtered_df["Usia"] >= usia_range[0])
-    &
-    (filtered_df["Usia"] <= usia_range[1])
-]
-
-# =====================================================
-# ONLY SHOW SAFE COLUMNS
-# =====================================================
-
-display_columns = [
-
-    "Nama",
-
-    "Jenis Kelamin",
-
-    "Kecamatan",
-
-    "Agama",
-
-    "Pekerjaan",
-
-    "Usia"
-]
-
-filtered_df = filtered_df[display_columns]
-
-# =====================================================
-# RESULT
-# =====================================================
-
-st.write(f"Jumlah Result: {len(filtered_df)}")
-
-st.dataframe(
-    filtered_df,
-    use_container_width=True
+run_query = st.button(
+    "Tampilkan Hasil",
+    type="primary"
 )
+
+# =====================================================
+# PROCESS QUERY
+# =====================================================
+
+if run_query:
+
+    filtered_df = df.copy()
+
+    for column, value in selected_filters.items():
+
+        # ======================================
+        # NUMERIC FILTER
+        # ======================================
+
+        if pd.api.types.is_numeric_dtype(df[column]):
+
+            filtered_df = filtered_df[
+                (filtered_df[column] >= value[0])
+                &
+                (filtered_df[column] <= value[1])
+            ]
+
+        # ======================================
+        # CATEGORY FILTER
+        # ======================================
+
+        else:
+
+            if len(value) > 0:
+
+                filtered_df = filtered_df[
+                    filtered_df[column]
+                    .astype(str)
+                    .isin(value)
+                ]
+
+    # ==========================================
+    # OUTPUT KOLOM YANG DICENTANG
+    # ==========================================
+
+    if len(selected_columns) > 0:
+
+        filtered_df = filtered_df[
+            selected_columns
+        ]
+
+    st.header("Hasil Query")
+
+    st.success(
+        f"Jumlah Data Ditemukan: {len(filtered_df)}"
+    )
+
+    st.dataframe(
+        filtered_df,
+        use_container_width=True
+    )
+
+    csv = filtered_df.to_csv(
+        index=False
+    ).encode("utf-8")
+
+    st.download_button(
+        "Download Hasil Query",
+        csv,
+        "hasil_query.csv",
+        "text/csv"
+    )
