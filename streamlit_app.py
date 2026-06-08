@@ -14,7 +14,7 @@ st.set_page_config(
 # LOAD DATASET
 # =====================================================
 
-DATASET_PATH = r"C:\Users\hanan\Documents\Data\Document\Exploratory Data\streamlit_ocr_ktp\dataset\dataset_OCR_preprocessing.csv"
+DATASET_PATH = DATASET_PATH = "./dataset/dataset_OCR_preprocessing.csv"
 
 @st.cache_data
 def load_data(path):
